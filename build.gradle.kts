@@ -127,17 +127,15 @@ tasks.create("deploy") {
     group = "deploy"
     dependsOn(tasks.getByName("package"))
     doLast {
-        exec {
-            commandLine("sls", "deploy")
-        }
+        cmd("sls", "deploy")
     }
 }
 
 
-fun commandLineOutput(vararg args: String) = ByteArrayOutputStream().use {
+fun cmd(vararg args: String, captureOutput: Boolean = false) = ByteArrayOutputStream().use {
     exec {
         commandLine(*args)
-        standardOutput = it
+        if (captureOutput) standardOutput = it
     }
     it.toString()
 }
@@ -147,16 +145,14 @@ tasks.create("deployFunctionsAndSite") {
     group = "deploy"
     dependsOn(tasks.getByName("package"))
     doLast {
-        commandLineOutput("sls", "deploy", "list", "functions")
+        cmd("sls", "deploy", "list", "functions", captureOutput = true)
             .also { println(it) }
             .split("\n")
             .let { it.subList(2, it.lastIndex) }
             .map { it.split(": ")[1] }
             .forEach {
-                exec { commandLine("sls", "deploy", "function", "-f", it) }
+                cmd("sls", "deploy", "function", "-f", it)
             }
-        exec {
-            commandLine("sls", "s3sync")
-        }
+        cmd("sls", "s3sync")
     }
 }
