@@ -1,0 +1,41 @@
+[
+  {
+    "communicationType": "YYY",
+    "name": "Varsel om innbetaling",
+    "properties": {
+      "type": "MULTI_SELECT_ALL",
+      "data": [
+        "Account X",
+        "Account Y"
+      ],
+      "properties": [
+        {
+          "type": "enum",
+          "label": "Velg dag",
+          "values": [
+            "Mandag",
+            "Tirsdag",
+            "Onsdag",
+            "Torsdag",
+            "Fredag",
+            "Lørdag",
+            "Søndag"
+          ]
+        },
+        {
+          "type": ""
+        }
+      ]
+    }
+  },
+  {
+    "communicationType": "XXX",
+    "name": "Varsel på tull",
+    "type": "SIMPLE"
+  },
+  {
+    "communicationType": "YYY",
+    "name": "Varsel om innbetaling",
+    "type": "CUSTOM"
+  }
+]

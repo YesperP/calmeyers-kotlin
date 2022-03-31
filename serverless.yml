@@ -1,0 +1,142 @@
+org: calmeyers
+app: booking2
+service: booking2
+frameworkVersion: '2'
+
+provider:
+  name: aws
+  region: eu-west-1
+  profile: calmeyers
+  lambdaHashingVersion: 20201221
+  runtime: java8
+  timeout: 10
+  memorySize: 3008
+
+  apiGateway:
+    shouldStartNameWithService: true
+
+  httpApi:
+    cors: true
+
+  environment:
+    BOOKING_TABLE: ${self:custom.bookingTable}
+    USER_TABLE: ${self:custom.userTable}
+    SITE_NAME: ${self:custom.siteName}
+
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:Scan
+          Resource:
+            - !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${self:custom.bookingTable}"
+            - !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${self:custom.userTable}"
+
+plugins:
+  - serverless-s3-sync
+
+custom:
+  siteName: 'calmeyers'
+  bookingTable: 'BookingTable'
+  userTable: 'UserTable'
+  s3Sync:
+    - bucketName: ${self:custom.siteName}
+      localDir: build/distributions/browser
+
+package:
+  artifact: build/libs/calmeyers-kotlin-shadow.jar
+
+functions:
+  tokenStart:
+    handler: handlers.VibboStartHandler
+    events:
+      - httpApi:
+          path: /token/start
+          method: POST
+  tokenEnd:
+    handler: handlers.VibboEndHandler
+    events:
+      - httpApi:
+          path: /token/end
+          method: POST
+  loginAlt:
+    handler: handlers.LoginAltHandler
+    events:
+      - httpApi:
+          path: /loginAlt
+          method: POST
+  bookings:
+    handler: handlers.GetBookingsHandler
+    events:
+      - httpApi:
+          path: /bookings
+          method: GET
+  booking-create:
+    handler: handlers.CreateBookingHandler
+    events:
+      - httpApi:
+          path: /bookings
+          method: POST
+  booking-delete:
+    handler: handlers.DeleteBookingHandler
+    events:
+      - httpApi:
+          path: /bookings/{bookingId}
+          method: DELETE
+
+resources:
+  Resources:
+    StaticSite:
+      Type: AWS::S3::Bucket
+      Properties:
+        AccessControl: PublicRead
+        BucketName: ${self:custom.siteName}
+        WebsiteConfiguration:
+          IndexDocument: index.html
+          ErrorDocument: index.html
+
+    StaticSiteS3BucketPolicy:
+      Type: AWS::S3::BucketPolicy
+      Properties:
+        Bucket: !Ref StaticSite
+        PolicyDocument:
+          Statement:
+            - Sid: "Allow read to site bucket"
+              Effect: Allow
+              Principal: "*"
+              Action:
+                - s3:GetObject
+              Resource: !Sub "arn:aws:s3:::${StaticSite}/*"
+
+    BookingTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.bookingTable}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: bookingId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: bookingId
+            KeyType: HASH
+        TimeToLiveSpecification:
+          AttributeName: ttl
+          Enabled: true
+
+    UserTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.userTable}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: userId
+            KeyType: HASH
+        TimeToLiveSpecification:
+          AttributeName: ttl
+          Enabled: true
